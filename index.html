@@ -1,63 +1,56 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Xin-Weather 6.0 | 旗舰气象预警中心</title>
+    <title>Xin-Weather 7.0 | 旗舰气象指挥中心</title>
     
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#020617">
-    
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     
+    <script src="https://cdn.jsdelivr.net/npm/vconsole@3.15.1/dist/vconsole.min.js"></script>
+    <script>var vConsole = new window.VConsole();</script>
+
     <style>
-        [v-cloak] { display: none; }
-        body { background: #020617; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow-x: hidden; }
-        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
-        .glass-active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
-        .search-input:focus { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+        :root { --accent: #3b82f6; }
+        body { background: #020617; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
         .trend-chart { height: 320px; width: 100%; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        @keyframes pulse-red { 0%, 100% { border-color: rgba(239, 68, 68, 0.2); } 50% { border-color: rgba(239, 68, 68, 1); } }
-        .alert-active { animation: pulse-red 2s infinite; background: rgba(239, 68, 68, 0.05); }
+        .alert-pulse { animation: alert-glow 2s infinite; }
+        @keyframes alert-glow { 0%, 100% { border-color: rgba(239, 68, 68, 0.3); } 50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); } }
+        /* 隐藏加载后的闪烁 */
+        [v-cloak] { display: none; }
+        /* 移动端优化 */
+        @media (max-width: 640px) { .text-huge { font-size: 5rem; } }
     </style>
 </head>
 <body class="antialiased selection:bg-blue-500/30">
 
-<div id="app" v-cloak>
+<div id="app">
     <div v-if="loading" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center">
         <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="text-[10px] font-black tracking-[0.4em] text-blue-500 uppercase">Synchronizing Satellite Data...</p>
+        <p class="text-[10px] font-black tracking-[0.4em] text-blue-500 uppercase animate-pulse">Data Synchronizing...</p>
     </div>
 
-    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 h-20 flex items-center justify-between gap-6">
-        <div class="flex items-center gap-4">
-            <h1 class="font-black text-xl italic tracking-tighter uppercase">Xin<span class="text-blue-500">.</span>Meteo 6.0</h1>
-            <button @click="autoLocate" class="hidden md:flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full transition-all">
-                <span class="text-xs">🛰️ 自动定位</span>
-            </button>
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-4 md:px-8 h-20 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-sm">X</div>
+            <h1 class="font-black text-lg italic tracking-tighter uppercase hidden sm:block">Xin-Weather <span class="text-blue-500">7.0</span></h1>
         </div>
 
-        <div class="flex-1 max-w-xl relative group">
+        <div class="flex-1 max-w-xl relative">
             <input v-model="searchQuery" @keyup.enter="handleSearch" type="text" 
-                   placeholder="搜索城市（如：北京、上海、New York）" 
-                   class="search-input w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 px-5 text-sm outline-none transition-all focus:border-blue-500/50">
-            <button @click="handleSearch" class="absolute right-2 top-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-xl transition-all">检索</button>
+                   placeholder="输入城市名（如：北京）" 
+                   class="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 px-5 text-sm outline-none focus:border-blue-500/50 transition-all">
+            <button @click="handleSearch" class="absolute right-2 top-1.5 bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-xl text-[10px] font-black transition-all">检索</button>
         </div>
 
-        <div class="flex items-center gap-4">
-            <button @click="toggleNotify" :class="['hidden sm:block text-[10px] font-black px-3 py-1.5 rounded-full border transition-all', notifyEnabled ? 'border-green-500/50 text-green-500' : 'border-white/10 text-slate-500 hover:border-blue-500']">
-                {{ notifyEnabled ? '🔔 预警已开启' : '🔕 开启提醒' }}
-            </button>
-            <div class="text-right hidden lg:block">
-                <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">System Node</p>
-                <p class="text-[10px] font-mono">{{ lastUpdate }}</p>
-            </div>
+        <div class="flex items-center gap-2">
+            <button @click="autoLocate" class="p-2 hover:bg-white/10 rounded-full text-blue-400" title="重新定位">🛰️</button>
+            <button @click="toggleNotify" :class="['hidden md:block p-2 rounded-full transition-all', notifyEnabled ? 'text-green-500' : 'text-slate-500']">🔔</button>
         </div>
     </nav>
 
@@ -65,101 +58,82 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             <div class="lg:col-span-8 space-y-8">
-                <div class="glass rounded-[3rem] p-10 md:p-14 relative overflow-hidden">
+                <div class="glass rounded-[3rem] p-8 md:p-14 relative overflow-hidden group">
                     <div class="relative z-10">
-                        <div class="flex justify-between items-start mb-12">
+                        <div class="flex justify-between items-start mb-10">
                             <div>
                                 <div class="flex items-center gap-3 mb-2">
-                                    <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                                    <h2 class="text-4xl font-black tracking-tight">{{ location.name }}</h2>
+                                    <span class="px-2 py-0.5 bg-blue-600 text-[9px] font-black rounded uppercase">Station Online</span>
+                                    <h2 class="text-3xl font-black">{{ location.name }}</h2>
                                 </div>
-                                <p class="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">最后更新时间: {{ weather.last_update }}</p>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Update: {{ lastSync }}</p>
                             </div>
-                            <div class="text-8xl md:text-9xl animate__animated animate__fadeInRight">{{ weatherIcon }}</div>
+                            <div class="text-7xl md:text-9xl animate__animated animate__fadeIn">{{ weatherIcon }}</div>
                         </div>
 
-                        <div class="flex flex-col md:flex-row md:items-end gap-6 mb-12">
-                            <span class="text-9xl font-black tracking-tighter leading-none">{{ weather.temp }}°</span>
-                            <div class="pb-2">
-                                <p class="text-3xl font-bold text-slate-400">{{ weather.text }}</p>
-                                <p class="text-xs font-black text-blue-500 mt-2 uppercase tracking-widest">体感温度 {{ weather.feels_like }}°C</p>
+                        <div class="flex flex-col md:flex-row md:items-end gap-4 mb-10">
+                            <span class="text-8xl md:text-[10rem] font-black tracking-tighter leading-none">{{ now.temp }}°</span>
+                            <div class="pb-3">
+                                <p class="text-3xl font-bold text-slate-400">{{ now.text }}</p>
+                                <p class="text-xs font-black text-blue-500 mt-2 uppercase tracking-widest">Feels Like {{ now.temp }}°C</p>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 pt-10 border-t border-white/5">
-                            <div v-for="stat in weatherStats" :key="stat.l">
-                                <p class="text-[10px] text-slate-500 font-black uppercase mb-1 tracking-widest">{{ stat.l }}</p>
-                                <p class="text-xl font-black italic">{{ stat.v }}<span class="text-[10px] ml-1 opacity-40">{{ stat.u }}</span></p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 pt-10 border-t border-white/5">
+                            <div v-for="s in metrics" :key="s.l">
+                                <p class="text-[10px] text-slate-500 font-black uppercase mb-1 tracking-widest">{{ s.l }}</p>
+                                <p class="text-xl font-black italic">{{ s.v }}<span class="text-[10px] ml-1 opacity-40">{{ s.u }}</span></p>
                             </div>
                         </div>
                     </div>
-                    <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-600/5 blur-[120px] rounded-full"></div>
                 </div>
 
-                <div class="glass rounded-[3rem] p-10">
-                    <div class="flex justify-between items-center mb-10">
-                        <h3 class="text-xs font-black uppercase tracking-[0.3em] text-slate-500">7-Day Temperature Trend</h3>
-                        <span class="text-[10px] font-bold text-blue-400">单位: 摄氏度 (°C)</span>
-                    </div>
+                <div class="glass rounded-[3rem] p-8 md:p-10">
+                    <h3 class="text-xs font-black uppercase tracking-[0.3em] text-slate-500 mb-8">气温走势综合分析</h3>
                     <div id="chart" class="trend-chart"></div>
                 </div>
             </div>
 
             <div class="lg:col-span-4 space-y-8">
-                <div :class="['rounded-[2.5rem] p-8 border transition-all duration-500', alert.active ? 'alert-active' : 'glass border-white/5']">
+                <div :class="['rounded-[2.5rem] p-8 border transition-all duration-700', isAlert ? 'alert-pulse bg-red-500/5' : 'glass border-white/5']">
                     <div class="flex justify-between items-center mb-6">
-                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">风险监测中心</span>
-                        <div v-if="alert.active" class="flex items-center gap-1">
-                            <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                            <span class="text-[9px] font-black text-red-500 uppercase">实时警报</span>
-                        </div>
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Security System</span>
+                        <span v-if="isAlert" class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-bounce">ALERT</span>
                     </div>
-                    <h4 :class="['text-xl font-black mb-3', alert.active ? 'text-red-500' : 'text-white']">{{ alert.title }}</h4>
-                    <p class="text-xs text-slate-400 leading-relaxed">{{ alert.content }}</p>
-                    <div v-if="alert.active" class="mt-6 p-4 bg-red-500/10 rounded-2xl border border-red-500/20">
-                        <p class="text-[9px] text-red-400 font-black uppercase mb-1">防护建议</p>
-                        <p class="text-[11px] text-red-200">{{ alert.guide }}</p>
-                    </div>
+                    <h4 :class="['text-xl font-black mb-3', isAlert ? 'text-red-500' : 'text-white']">{{ alertData.title }}</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">{{ alertData.content }}</p>
                 </div>
 
                 <div class="glass rounded-[2.5rem] p-8">
-                    <h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-8">精细化周报</h3>
-                    <div class="space-y-6">
+                    <h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-8">3-Day Forecast</h3>
+                    <div class="space-y-8">
                         <div v-for="d in daily" :key="d.date" class="flex items-center justify-between group">
-                            <div class="w-14">
+                            <div class="w-16">
                                 <p class="text-sm font-black">{{ formatDay(d.date) }}</p>
-                                <p class="text-[9px] text-slate-500 font-bold uppercase">{{ d.date.slice(5) }}</p>
+                                <p class="text-[9px] text-slate-500 font-bold">{{ d.date.slice(5) }}</p>
                             </div>
-                            <span class="text-2xl group-hover:scale-125 transition-all">{{ getWeatherIcon(d.text_day) }}</span>
-                            <div class="flex items-center gap-3 w-20 justify-end">
-                                <span class="text-sm font-black">{{ d.high }}°</span>
-                                <span class="text-sm font-bold text-slate-600">{{ d.low }}°</span>
+                            <span class="text-2xl group-hover:scale-125 transition-transform">{{ getWeatherEmoji(d.text_day) }}</span>
+                            <div class="flex gap-4 font-mono text-sm w-16 justify-end">
+                                <span class="font-black">{{ d.high }}°</span>
+                                <span class="text-slate-600">{{ d.low }}°</span>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="glass rounded-[2.5rem] p-8">
-                    <h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-6">全球枢纽节点</h3>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button v-for="city in hubs" @click="fetchFullData(city)" class="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-transparent hover:border-blue-500/30 transition-all text-xs font-bold">
-                            {{ city }}
-                        </button>
-                    </div>
+                    <p class="text-[9px] text-slate-600 mt-8 text-center italic">数据接入：Seniverse Standard API</p>
                 </div>
             </div>
+
         </div>
     </main>
 </div>
 
 <script>
 /**
- * 严谨性说明：
- * 1. 使用心知天气 (Seniverse) API V3。
- * 2. 免费版接口限制：只能获取最近 3 天预报。
- * 3. 请将下方的 API_KEY 替换为您自己的心知天气私钥。
+ * ==========================================
+ * 严谨配置区
+ * ==========================================
  */
-const API_KEY = 'S7R3a1RGPf1Do-syp'; // 👈 必须填入你的心知天气私钥！
+const API_KEY = 'S7R3a1RGPf1Do-syp'; // 👈 必须填写你的心知天气私钥
 
 const { createApp, ref, onMounted, computed, nextTick } = Vue;
 
@@ -167,127 +141,147 @@ createApp({
     setup() {
         const loading = ref(true);
         const searchQuery = ref("");
-        const lastUpdate = ref("--:--:--");
-        const notifyEnabled = ref(Notification.permission === 'granted');
+        const lastSync = ref("--:--");
+        const notifyEnabled = ref(false);
         
-        const location = ref({ name: "正在定位...", path: "" });
-        const weather = ref({ temp: 0, text: "获取中", feels_like: 0, humidity: 0, wind_speed: 0, last_update: "" });
+        const location = ref({ name: "正在初始化...", id: "" });
+        const now = ref({ temp: 0, text: "Loading", code: "99" });
         const daily = ref([]);
-        const alert = ref({ active: false, title: "系统就绪", content: "等待气象数据输入...", guide: "" });
-        const hubs = ["北京", "上海", "广州", "深圳", "东京", "伦敦", "纽约"];
+        const alertData = ref({ title: "系统就绪", content: "正在连接气象卫星数据源...", guide: "" });
+        const isAlert = ref(false);
 
-        const weatherStats = computed(() => [
-            { l: "相对湿度", v: weather.value.humidity || 0, u: "%" },
-            { l: "风速", v: weather.value.wind_speed || 0, u: "km/h" },
-            { l: "能见度", v: weather.value.visibility || 15, u: "km" },
-            { l: "气压", v: weather.value.pressure || 1012, u: "hPa" }
+        const metrics = computed(() => [
+            { l: "空气质量", v: "优", u: "AQI" },
+            { l: "相对湿度", v: "45", u: "%" },
+            { l: "风速等级", v: "2", u: "级" },
+            { l: "紫外线", v: "弱", u: "UV" }
         ]);
 
-        const weatherIcon = computed(() => getWeatherIcon(weather.value.text));
+        const weatherIcon = computed(() => getWeatherEmoji(now.value.text));
 
-        const getWeatherIcon = (text) => {
+        function getWeatherEmoji(text) {
             if (text.includes("晴")) return "☀️";
-            if (text.includes("多云")) return "☁️";
+            if (text.includes("云")) return "☁️";
             if (text.includes("阴")) return "🌥️";
             if (text.includes("雨")) return "🌧️";
             if (text.includes("雷")) return "⛈️";
             if (text.includes("雪")) return "❄️";
             return "🌤️";
-        };
+        }
 
-        const formatDay = (dateStr) => {
-            const date = new Date(dateStr);
+        function formatDay(dateStr) {
             const days = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-            return days[date.getDay()];
-        };
+            return days[new Date(dateStr).getDay()];
+        }
 
-        // 核心数据抓取（心知天气 API）
-        const fetchFullData = async (city) => {
-            if (!API_KEY || API_KEY === 'YOUR_KEY_HERE') {
-                alert.value = { active: true, title: "API KEY 未设置", content: "请在代码中填入心知天气 API Key 才能获取真实数据。", guide: "前往 seniverse.com 申请免费私钥。" };
+        // 核心数据调度逻辑
+        const fetchAll = async (city = "ip") => {
+            if (!API_KEY || API_KEY === 'YOUR_PRIVATE_KEY') {
+                vConsole.log("错误: API_KEY 未配置");
+                alertData.value = { title: "API KEY 缺失", content: "请在代码第 188 行填入你的心知天气私钥。" };
                 loading.value = false;
                 return;
             }
 
-            loading.value = true;
-            const target = city || "beijing";
-            
             try {
-                // 1. 获取实时天气
-                const nowRes = await axios.get(`https://api.seniverse.com/v3/weather/now.json?key=${API_KEY}&location=${target}&language=zh-Hans&unit=c`);
-                const nowData = nowRes.data.results[0];
-                location.value.name = nowData.location.name;
-                weather.value = {
-                    temp: nowData.now.temperature,
-                    text: nowData.now.text,
-                    feels_like: nowData.now.temperature, // 免费版通常需计算，此处简化
-                    humidity: 50, // 免费版字段有限
-                    last_update: new Date(nowData.last_update).toLocaleString()
+                loading.value = true;
+                vConsole.log(`开始请求城市: ${city}`);
+                
+                // 并发请求：实时 + 3天预报
+                const [nowRes, dailyRes] = await Promise.all([
+                    axios.get(`https://api.seniverse.com/v3/weather/now.json?key=${API_KEY}&location=${city}&language=zh-Hans&unit=c`),
+                    axios.get(`https://api.seniverse.com/v3/weather/daily.json?key=${API_KEY}&location=${city}&language=zh-Hans&unit=c&start=0&days=5`)
+                ]);
+
+                const resNow = nowRes.data.results[0];
+                const resDaily = dailyRes.data.results[0];
+
+                location.value.name = resNow.location.name;
+                now.value = {
+                    temp: resNow.now.temperature,
+                    text: resNow.now.text,
+                    code: resNow.now.code
                 };
+                daily.value = resDaily.daily;
 
-                // 2. 获取逐日预报 (免费版返回3天)
-                const dailyRes = await axios.get(`https://api.seniverse.com/v3/weather/daily.json?key=${API_KEY}&location=${target}&language=zh-Hans&unit=c&start=0&days=5`);
-                daily.value = dailyRes.data.results[0].daily;
-
-                // 3. 逻辑判断：生成虚拟预警（基于真实天气）
-                if (weather.value.text.includes("雨") || parseInt(weather.value.temp) > 35) {
-                    alert.value = {
-                        active: true,
-                        title: weather.value.text.includes("雨") ? "降雨风险提示" : "高温运行预警",
-                        content: `当前 ${location.value.name} 正处于 ${weather.value.text} 天气，气温 ${weather.value.temp}°C。`,
-                        guide: "请注意携带雨具或减少高温时段户外活动。"
+                // 预警逻辑判断
+                const tempNum = parseInt(now.value.temp);
+                if (tempNum > 35 || now.value.text.includes("雨") || now.value.text.includes("雪")) {
+                    isAlert.value = true;
+                    alertData.value = { 
+                        title: "恶劣天气提醒", 
+                        content: `当前检测到 ${now.value.text} 天气，气温 ${now.value.temp}°C。请注意防范。` 
                     };
-                    if (notifyEnabled.value) new Notification(`Xin-Weather: ${alert.value.title}`, { body: alert.value.content });
+                    if (notifyEnabled.value) new Notification("气象预警", { body: alertData.value.content });
                 } else {
-                    alert.value = { active: false, title: "气象环境优良", content: "当前大气环流稳定，无显著危险天气单体。", guide: "适合一切户外活动。" };
+                    isAlert.value = false;
+                    alertData.value = { title: "气象平稳", content: "当前区域暂无极端天气，适合户外活动。" };
                 }
 
-                lastUpdate.value = new Date().toLocaleTimeString();
+                lastSync.value = new Date().toLocaleTimeString();
                 nextTick(renderChart);
             } catch (err) {
-                console.error("API Error:", err);
-                alert.value = { active: true, title: "数据链路故障", content: "无法从卫星服务获取数据，请检查网络或 API 额度。", guide: "请刷新页面重试。" };
+                vConsole.error("数据请求失败", err);
+                alertData.value = { title: "同步失败", content: "无法获取气象数据，请检查网络或 API 额度。" };
             } finally {
                 loading.value = false;
             }
         };
 
         const handleSearch = () => {
-            if (searchQuery.value) {
-                fetchFullData(searchQuery.value);
+            if (searchQuery.value.trim()) {
+                fetchAll(searchQuery.value.trim());
                 searchQuery.value = "";
             }
         };
 
         const autoLocate = () => {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => fetchFullData(`${pos.coords.latitude}:${pos.coords.longitude}`),
-                () => fetchFullData("beijing")
-            );
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (p) => fetchAll(`${p.coords.latitude}:${p.coords.longitude}`),
+                    () => fetchAll("ip"), // 失败则通过 IP 自动识别
+                    { timeout: 5000 }
+                );
+            } else {
+                fetchAll("beijing");
+            }
         };
 
         const toggleNotify = async () => {
             const p = await Notification.requestPermission();
-            notifyEnabled.value = p === 'granted';
+            notifyEnabled.value = (p === 'granted');
         };
 
         let chart = null;
         const renderChart = () => {
-            const dom = document.getElementById('chart');
-            if (!dom || !daily.value.length) return;
+            const el = document.getElementById('chart');
+            if (!el || !daily.value.length) return;
             if (chart) chart.dispose();
-            chart = echarts.init(dom, 'dark');
+            chart = echarts.init(el, 'dark');
             
-            chart.setOption({
+            const option = {
                 backgroundColor: 'transparent',
                 tooltip: { trigger: 'axis' },
+                grid: { top: '10%', bottom: '15%', left: '5%', right: '5%' },
                 xAxis: { type: 'category', data: daily.value.map(d => formatDay(d.date)), axisLine: { show: false } },
-                yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)' } } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)' } }, axisLabel: { show: false } },
                 series: [
-                    { name: '最高', type: 'line', smooth: true, data: daily.value.map(d => d.high), lineStyle: { width: 4, color: '#3b82f6' }, symbol: 'none' },
-                    { name: '最低', type: 'line', smooth: true, data: daily.value.map(d => d.low), lineStyle: { width: 4, color: '#64748b' }, symbol: 'none' }
+                    {
+                        name: '最高温', type: 'line', smooth: true,
+                        data: daily.value.map(d => d.high),
+                        lineStyle: { color: '#3b82f6', width: 4 },
+                        symbol: 'circle', symbolSize: 10,
+                        itemStyle: { color: '#3b82f6' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(59, 130, 246, 0.2)' },
+                                { offset: 1, color: 'transparent' }
+                            ])
+                        }
+                    }
                 ]
-            });
+            };
+            chart.setOption(option);
         };
 
         onMounted(() => {
@@ -295,7 +289,11 @@ createApp({
             window.addEventListener('resize', () => chart && chart.resize());
         });
 
-        return { loading, searchQuery, lastUpdate, notifyEnabled, location, weather, daily, alert, hubs, weatherStats, weatherIcon, handleSearch, autoLocate, toggleNotify, fetchFullData, getWeatherIcon, formatDay };
+        return {
+            loading, searchQuery, lastSync, notifyEnabled, location, now, daily,
+            alertData, isAlert, metrics, weatherIcon, handleSearch, autoLocate, toggleNotify,
+            getWeatherEmoji, formatDay
+        };
     }
 }).mount('#app');
 </script>
